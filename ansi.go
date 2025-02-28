@@ -2,6 +2,9 @@ package chimp
 
 import "strings"
 
+// Sequence represents an ANSI escape sequence.
+type Sequence string
+
 // Style represents an ANSI style name that maps to an escape sequence.
 type Style string
 
@@ -23,58 +26,103 @@ func (s Style) Matches(input string) bool {
 	return true
 }
 
-// ANSI style names as exported Style constants.
+// ANSI style names as exported Style constants and their corresponding Sequence constants.
 const (
-	StyleReset         Style = "Reset"
-	StyleBold          Style = "Bold"
-	StyleFaint         Style = "Faint"
-	StyleItalic        Style = "Italic"
-	StyleUnderline     Style = "Underline"
-	StyleBlink         Style = "Blink"
-	StyleRapidBlink    Style = "RapidBlink"
-	StyleInverse       Style = "Inverse"
-	StyleHidden        Style = "Hidden"
-	StyleStrikethrough Style = "Strikethrough"
+	// Reset
+	StyleReset    Style    = "Reset"
+	SequenceReset Sequence = "\033[0m"
+
+	// Text Attributes
+	StyleBold             Style    = "Bold"
+	SequenceBold          Sequence = "\033[1m"
+	StyleFaint            Style    = "Faint"
+	SequenceFaint         Sequence = "\033[2m"
+	StyleItalic           Style    = "Italic"
+	SequenceItalic        Sequence = "\033[3m"
+	StyleUnderline        Style    = "Underline"
+	SequenceUnderline     Sequence = "\033[4m"
+	StyleBlink            Style    = "Blink"
+	SequenceBlink         Sequence = "\033[5m"
+	StyleRapidBlink       Style    = "RapidBlink"
+	SequenceRapidBlink    Sequence = "\033[6m"
+	StyleInverse          Style    = "Inverse"
+	SequenceInverse       Sequence = "\033[7m"
+	StyleHidden           Style    = "Hidden"
+	SequenceHidden        Sequence = "\033[8m"
+	StyleStrikethrough    Style    = "Strikethrough"
+	SequenceStrikethrough Sequence = "\033[9m"
 
 	// Foreground Colors (Standard)
-	StyleBlack   Style = "Black"
-	StyleRed     Style = "Red"
-	StyleGreen   Style = "Green"
-	StyleYellow  Style = "Yellow"
-	StyleBlue    Style = "Blue"
-	StyleMagenta Style = "Magenta"
-	StyleCyan    Style = "Cyan"
-	StyleWhite   Style = "White"
+	StyleBlack      Style    = "Black"
+	SequenceBlack   Sequence = "\033[30m"
+	StyleRed        Style    = "Red"
+	SequenceRed     Sequence = "\033[31m"
+	StyleGreen      Style    = "Green"
+	SequenceGreen   Sequence = "\033[32m"
+	StyleYellow     Style    = "Yellow"
+	SequenceYellow  Sequence = "\033[33m"
+	StyleBlue       Style    = "Blue"
+	SequenceBlue    Sequence = "\033[34m"
+	StyleMagenta    Style    = "Magenta"
+	SequenceMagenta Sequence = "\033[35m"
+	StyleCyan       Style    = "Cyan"
+	SequenceCyan    Sequence = "\033[36m"
+	StyleWhite      Style    = "White"
+	SequenceWhite   Sequence = "\033[37m"
 
 	// Background Colors (Standard)
-	StyleBgBlack   Style = "BgBlack"
-	StyleBgRed     Style = "BgRed"
-	StyleBgGreen   Style = "BgGreen"
-	StyleBgYellow  Style = "BgYellow"
-	StyleBgBlue    Style = "BgBlue"
-	StyleBgMagenta Style = "BgMagenta"
-	StyleBgCyan    Style = "BgCyan"
-	StyleBgWhite   Style = "BgWhite"
+	StyleBgBlack      Style    = "BgBlack"
+	SequenceBgBlack   Sequence = "\033[40m"
+	StyleBgRed        Style    = "BgRed"
+	SequenceBgRed     Sequence = "\033[41m"
+	StyleBgGreen      Style    = "BgGreen"
+	SequenceBgGreen   Sequence = "\033[42m"
+	StyleBgYellow     Style    = "BgYellow"
+	SequenceBgYellow  Sequence = "\033[43m"
+	StyleBgBlue       Style    = "BgBlue"
+	SequenceBgBlue    Sequence = "\033[44m"
+	StyleBgMagenta    Style    = "BgMagenta"
+	SequenceBgMagenta Sequence = "\033[45m"
+	StyleBgCyan       Style    = "BgCyan"
+	SequenceBgCyan    Sequence = "\033[46m"
+	StyleBgWhite      Style    = "BgWhite"
+	SequenceBgWhite   Sequence = "\033[47m"
 
 	// Bright Foreground Colors
-	StyleBrightBlack   Style = "BrightBlack"
-	StyleBrightRed     Style = "BrightRed"
-	StyleBrightGreen   Style = "BrightGreen"
-	StyleBrightYellow  Style = "BrightYellow"
-	StyleBrightBlue    Style = "BrightBlue"
-	StyleBrightMagenta Style = "BrightMagenta"
-	StyleBrightCyan    Style = "BrightCyan"
-	StyleBrightWhite   Style = "BrightWhite"
+	StyleBrightBlack      Style    = "BrightBlack"
+	SequenceBrightBlack   Sequence = "\033[90m"
+	StyleBrightRed        Style    = "BrightRed"
+	SequenceBrightRed     Sequence = "\033[91m"
+	StyleBrightGreen      Style    = "BrightGreen"
+	SequenceBrightGreen   Sequence = "\033[92m"
+	StyleBrightYellow     Style    = "BrightYellow"
+	SequenceBrightYellow  Sequence = "\033[93m"
+	StyleBrightBlue       Style    = "BrightBlue"
+	SequenceBrightBlue    Sequence = "\033[94m"
+	StyleBrightMagenta    Style    = "BrightMagenta"
+	SequenceBrightMagenta Sequence = "\033[95m"
+	StyleBrightCyan       Style    = "BrightCyan"
+	SequenceBrightCyan    Sequence = "\033[96m"
+	StyleBrightWhite      Style    = "BrightWhite"
+	SequenceBrightWhite   Sequence = "\033[97m"
 
 	// Bright Background Colors
-	StyleBgBrightBlack   Style = "BgBrightBlack"
-	StyleBgBrightRed     Style = "BgBrightRed"
-	StyleBgBrightGreen   Style = "BgBrightGreen"
-	StyleBgBrightYellow  Style = "BgBrightYellow"
-	StyleBgBrightBlue    Style = "BgBrightBlue"
-	StyleBgBrightMagenta Style = "BgBrightMagenta"
-	StyleBgBrightCyan    Style = "BgBrightCyan"
-	StyleBgBrightWhite   Style = "BgBrightWhite"
+	StyleBgBrightBlack      Style    = "BgBrightBlack"
+	SequenceBgBrightBlack   Sequence = "\033[100m"
+	StyleBgBrightRed        Style    = "BgBrightRed"
+	SequenceBgBrightRed     Sequence = "\033[101m"
+	StyleBgBrightGreen      Style    = "BgBrightGreen"
+	SequenceBgBrightGreen   Sequence = "\033[102m"
+	StyleBgBrightYellow     Style    = "BgBrightYellow"
+	SequenceBgBrightYellow  Sequence = "\033[103m"
+	StyleBgBrightBlue       Style    = "BgBrightBlue"
+	SequenceBgBrightBlue    Sequence = "\033[104m"
+	StyleBgBrightMagenta    Style    = "BgBrightMagenta"
+	SequenceBgBrightMagenta Sequence = "\033[105m"
+	StyleBgBrightCyan       Style    = "BgBrightCyan"
+	SequenceBgBrightCyan    Sequence = "\033[106m"
+	StyleBgBrightWhite      Style    = "BgBrightWhite"
+	SequenceBgBrightWhite   Sequence = "\033[107m"
 )
 
 // getANSIStyles maps style names to ANSI escape sequences using Style constants.
@@ -84,97 +132,97 @@ func getANSIStyles(styles string) string {
 		trimmed := strings.TrimSpace(style)
 		switch {
 		case StyleReset.Matches(trimmed):
-			ansi += "\033[0m"
+			ansi += string(SequenceReset)
 		case StyleBold.Matches(trimmed):
-			ansi += "\033[1m"
+			ansi += string(SequenceBold)
 		case StyleFaint.Matches(trimmed):
-			ansi += "\033[2m"
+			ansi += string(SequenceFaint)
 		case StyleItalic.Matches(trimmed):
-			ansi += "\033[3m"
+			ansi += string(SequenceItalic)
 		case StyleUnderline.Matches(trimmed):
-			ansi += "\033[4m"
+			ansi += string(SequenceUnderline)
 		case StyleBlink.Matches(trimmed):
-			ansi += "\033[5m"
+			ansi += string(SequenceBlink)
 		case StyleRapidBlink.Matches(trimmed):
-			ansi += "\033[6m"
+			ansi += string(SequenceRapidBlink)
 		case StyleInverse.Matches(trimmed):
-			ansi += "\033[7m"
+			ansi += string(SequenceInverse)
 		case StyleHidden.Matches(trimmed):
-			ansi += "\033[8m"
+			ansi += string(SequenceHidden)
 		case StyleStrikethrough.Matches(trimmed):
-			ansi += "\033[9m"
+			ansi += string(SequenceStrikethrough)
 
 		// Foreground Colors
 		case StyleBlack.Matches(trimmed):
-			ansi += "\033[30m"
+			ansi += string(SequenceBlack)
 		case StyleRed.Matches(trimmed):
-			ansi += "\033[31m"
+			ansi += string(SequenceRed)
 		case StyleGreen.Matches(trimmed):
-			ansi += "\033[32m"
+			ansi += string(SequenceGreen)
 		case StyleYellow.Matches(trimmed):
-			ansi += "\033[33m"
+			ansi += string(SequenceYellow)
 		case StyleBlue.Matches(trimmed):
-			ansi += "\033[34m"
+			ansi += string(SequenceBlue)
 		case StyleMagenta.Matches(trimmed):
-			ansi += "\033[35m"
+			ansi += string(SequenceMagenta)
 		case StyleCyan.Matches(trimmed):
-			ansi += "\033[36m"
+			ansi += string(SequenceCyan)
 		case StyleWhite.Matches(trimmed):
-			ansi += "\033[37m"
+			ansi += string(SequenceWhite)
 
 		// Background Colors
 		case StyleBgBlack.Matches(trimmed):
-			ansi += "\033[40m"
+			ansi += string(SequenceBgBlack)
 		case StyleBgRed.Matches(trimmed):
-			ansi += "\033[41m"
+			ansi += string(SequenceBgRed)
 		case StyleBgGreen.Matches(trimmed):
-			ansi += "\033[42m"
+			ansi += string(SequenceBgGreen)
 		case StyleBgYellow.Matches(trimmed):
-			ansi += "\033[43m"
+			ansi += string(SequenceBgYellow)
 		case StyleBgBlue.Matches(trimmed):
-			ansi += "\033[44m"
+			ansi += string(SequenceBgBlue)
 		case StyleBgMagenta.Matches(trimmed):
-			ansi += "\033[45m"
+			ansi += string(SequenceBgMagenta)
 		case StyleBgCyan.Matches(trimmed):
-			ansi += "\033[46m"
+			ansi += string(SequenceBgCyan)
 		case StyleBgWhite.Matches(trimmed):
-			ansi += "\033[47m"
+			ansi += string(SequenceBgWhite)
 
 		// Bright Foreground Colors
 		case StyleBrightBlack.Matches(trimmed):
-			ansi += "\033[90m"
+			ansi += string(SequenceBrightBlack)
 		case StyleBrightRed.Matches(trimmed):
-			ansi += "\033[91m"
+			ansi += string(SequenceBrightRed)
 		case StyleBrightGreen.Matches(trimmed):
-			ansi += "\033[92m"
+			ansi += string(SequenceBrightGreen)
 		case StyleBrightYellow.Matches(trimmed):
-			ansi += "\033[93m"
+			ansi += string(SequenceBrightYellow)
 		case StyleBrightBlue.Matches(trimmed):
-			ansi += "\033[94m"
+			ansi += string(SequenceBrightBlue)
 		case StyleBrightMagenta.Matches(trimmed):
-			ansi += "\033[95m"
+			ansi += string(SequenceBrightMagenta)
 		case StyleBrightCyan.Matches(trimmed):
-			ansi += "\033[96m"
+			ansi += string(SequenceBrightCyan)
 		case StyleBrightWhite.Matches(trimmed):
-			ansi += "\033[97m"
+			ansi += string(SequenceBrightWhite)
 
 		// Bright Background Colors
 		case StyleBgBrightBlack.Matches(trimmed):
-			ansi += "\033[100m"
+			ansi += string(SequenceBgBrightBlack)
 		case StyleBgBrightRed.Matches(trimmed):
-			ansi += "\033[101m"
+			ansi += string(SequenceBgBrightRed)
 		case StyleBgBrightGreen.Matches(trimmed):
-			ansi += "\033[102m"
+			ansi += string(SequenceBgBrightGreen)
 		case StyleBgBrightYellow.Matches(trimmed):
-			ansi += "\033[103m"
+			ansi += string(SequenceBgBrightYellow)
 		case StyleBgBrightBlue.Matches(trimmed):
-			ansi += "\033[104m"
+			ansi += string(SequenceBgBrightBlue)
 		case StyleBgBrightMagenta.Matches(trimmed):
-			ansi += "\033[105m"
+			ansi += string(SequenceBgBrightMagenta)
 		case StyleBgBrightCyan.Matches(trimmed):
-			ansi += "\033[106m"
+			ansi += string(SequenceBgBrightCyan)
 		case StyleBgBrightWhite.Matches(trimmed):
-			ansi += "\033[107m"
+			ansi += string(SequenceBgBrightWhite)
 		}
 	}
 	return ansi
