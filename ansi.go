@@ -1,12 +1,25 @@
 package chimp
 
-import "strings"
-
 // Sequence represents an ANSI escape sequence.
 type Sequence string
 
+// MakeSequence creates a Sequence from a string using style-to-sequence conversion.
+func MakeSequence(s string) Sequence {
+	return styleToSequence(Style(s))
+}
+
+// ToStyle converts a Sequence to its corresponding Style.
+func (s Sequence) ToStyle() Style {
+	return sequenceToStyle(s)
+}
+
 // Style represents an ANSI style name that maps to an escape sequence.
 type Style string
+
+// MakeStyle creates a Style from a string using sequence-to-style conversion.
+func MakeStyle(s string) Style {
+	return sequenceToStyle(Sequence(s))
+}
 
 // Matches checks if the input matches the Style exactly or case-insensitively with an offset of 32.
 func (s Style) Matches(input string) bool {
@@ -26,8 +39,19 @@ func (s Style) Matches(input string) bool {
 	return true
 }
 
+// ToSequence converts a Style to its corresponding Sequence.
+func (s Style) ToSequence() Sequence {
+	return styleToSequence(s)
+}
+
 // ANSI style names as exported Style constants and their corresponding Sequence constants.
 const (
+	// Special Cases
+	StyleUnknown    Style    = "unknown"
+	SequenceUnknown Sequence = "unknown"
+	StyleUnset      Style    = ""
+	SequenceUnset   Sequence = ""
+
 	// Reset
 	StyleReset    Style    = "Reset"
 	SequenceReset Sequence = "\033[0m"
@@ -125,105 +149,212 @@ const (
 	SequenceBgBrightWhite   Sequence = "\033[107m"
 )
 
-// getANSIStyles maps style names to ANSI escape sequences using Style constants.
-func getANSIStyles(styles string) string {
-	ansi := ""
-	for _, style := range strings.Split(styles, ",") {
-		trimmed := strings.TrimSpace(style)
-		switch {
-		case StyleReset.Matches(trimmed):
-			ansi += string(SequenceReset)
-		case StyleBold.Matches(trimmed):
-			ansi += string(SequenceBold)
-		case StyleFaint.Matches(trimmed):
-			ansi += string(SequenceFaint)
-		case StyleItalic.Matches(trimmed):
-			ansi += string(SequenceItalic)
-		case StyleUnderline.Matches(trimmed):
-			ansi += string(SequenceUnderline)
-		case StyleBlink.Matches(trimmed):
-			ansi += string(SequenceBlink)
-		case StyleRapidBlink.Matches(trimmed):
-			ansi += string(SequenceRapidBlink)
-		case StyleInverse.Matches(trimmed):
-			ansi += string(SequenceInverse)
-		case StyleHidden.Matches(trimmed):
-			ansi += string(SequenceHidden)
-		case StyleStrikethrough.Matches(trimmed):
-			ansi += string(SequenceStrikethrough)
+// sequenceToStyle converts a Sequence to its corresponding Style.
+func sequenceToStyle(s Sequence) Style {
+	switch s {
+	case SequenceReset:
+		return StyleReset
+	case SequenceBold:
+		return StyleBold
+	case SequenceFaint:
+		return StyleFaint
+	case SequenceItalic:
+		return StyleItalic
+	case SequenceUnderline:
+		return StyleUnderline
+	case SequenceBlink:
+		return StyleBlink
+	case SequenceRapidBlink:
+		return StyleRapidBlink
+	case SequenceInverse:
+		return StyleInverse
+	case SequenceHidden:
+		return StyleHidden
+	case SequenceStrikethrough:
+		return StyleStrikethrough
 
-		// Foreground Colors
-		case StyleBlack.Matches(trimmed):
-			ansi += string(SequenceBlack)
-		case StyleRed.Matches(trimmed):
-			ansi += string(SequenceRed)
-		case StyleGreen.Matches(trimmed):
-			ansi += string(SequenceGreen)
-		case StyleYellow.Matches(trimmed):
-			ansi += string(SequenceYellow)
-		case StyleBlue.Matches(trimmed):
-			ansi += string(SequenceBlue)
-		case StyleMagenta.Matches(trimmed):
-			ansi += string(SequenceMagenta)
-		case StyleCyan.Matches(trimmed):
-			ansi += string(SequenceCyan)
-		case StyleWhite.Matches(trimmed):
-			ansi += string(SequenceWhite)
+	// Foreground Colors
+	case SequenceBlack:
+		return StyleBlack
+	case SequenceRed:
+		return StyleRed
+	case SequenceGreen:
+		return StyleGreen
+	case SequenceYellow:
+		return StyleYellow
+	case SequenceBlue:
+		return StyleBlue
+	case SequenceMagenta:
+		return StyleMagenta
+	case SequenceCyan:
+		return StyleCyan
+	case SequenceWhite:
+		return StyleWhite
 
-		// Background Colors
-		case StyleBgBlack.Matches(trimmed):
-			ansi += string(SequenceBgBlack)
-		case StyleBgRed.Matches(trimmed):
-			ansi += string(SequenceBgRed)
-		case StyleBgGreen.Matches(trimmed):
-			ansi += string(SequenceBgGreen)
-		case StyleBgYellow.Matches(trimmed):
-			ansi += string(SequenceBgYellow)
-		case StyleBgBlue.Matches(trimmed):
-			ansi += string(SequenceBgBlue)
-		case StyleBgMagenta.Matches(trimmed):
-			ansi += string(SequenceBgMagenta)
-		case StyleBgCyan.Matches(trimmed):
-			ansi += string(SequenceBgCyan)
-		case StyleBgWhite.Matches(trimmed):
-			ansi += string(SequenceBgWhite)
+	// Background Colors
+	case SequenceBgBlack:
+		return StyleBgBlack
+	case SequenceBgRed:
+		return StyleBgRed
+	case SequenceBgGreen:
+		return StyleBgGreen
+	case SequenceBgYellow:
+		return StyleBgYellow
+	case SequenceBgBlue:
+		return StyleBgBlue
+	case SequenceBgMagenta:
+		return StyleBgMagenta
+	case SequenceBgCyan:
+		return StyleBgCyan
+	case SequenceBgWhite:
+		return StyleBgWhite
 
-		// Bright Foreground Colors
-		case StyleBrightBlack.Matches(trimmed):
-			ansi += string(SequenceBrightBlack)
-		case StyleBrightRed.Matches(trimmed):
-			ansi += string(SequenceBrightRed)
-		case StyleBrightGreen.Matches(trimmed):
-			ansi += string(SequenceBrightGreen)
-		case StyleBrightYellow.Matches(trimmed):
-			ansi += string(SequenceBrightYellow)
-		case StyleBrightBlue.Matches(trimmed):
-			ansi += string(SequenceBrightBlue)
-		case StyleBrightMagenta.Matches(trimmed):
-			ansi += string(SequenceBrightMagenta)
-		case StyleBrightCyan.Matches(trimmed):
-			ansi += string(SequenceBrightCyan)
-		case StyleBrightWhite.Matches(trimmed):
-			ansi += string(SequenceBrightWhite)
+	// Bright Foreground Colors
+	case SequenceBrightBlack:
+		return StyleBrightBlack
+	case SequenceBrightRed:
+		return StyleBrightRed
+	case SequenceBrightGreen:
+		return StyleBrightGreen
+	case SequenceBrightYellow:
+		return StyleBrightYellow
+	case SequenceBrightBlue:
+		return StyleBrightBlue
+	case SequenceBrightMagenta:
+		return StyleBrightMagenta
+	case SequenceBrightCyan:
+		return StyleBrightCyan
+	case SequenceBrightWhite:
+		return StyleBrightWhite
 
-		// Bright Background Colors
-		case StyleBgBrightBlack.Matches(trimmed):
-			ansi += string(SequenceBgBrightBlack)
-		case StyleBgBrightRed.Matches(trimmed):
-			ansi += string(SequenceBgBrightRed)
-		case StyleBgBrightGreen.Matches(trimmed):
-			ansi += string(SequenceBgBrightGreen)
-		case StyleBgBrightYellow.Matches(trimmed):
-			ansi += string(SequenceBgBrightYellow)
-		case StyleBgBrightBlue.Matches(trimmed):
-			ansi += string(SequenceBgBrightBlue)
-		case StyleBgBrightMagenta.Matches(trimmed):
-			ansi += string(SequenceBgBrightMagenta)
-		case StyleBgBrightCyan.Matches(trimmed):
-			ansi += string(SequenceBgBrightCyan)
-		case StyleBgBrightWhite.Matches(trimmed):
-			ansi += string(SequenceBgBrightWhite)
-		}
+	// Bright Background Colors
+	case SequenceBgBrightBlack:
+		return StyleBgBrightBlack
+	case SequenceBgBrightRed:
+		return StyleBgBrightRed
+	case SequenceBgBrightGreen:
+		return StyleBgBrightGreen
+	case SequenceBgBrightYellow:
+		return StyleBgBrightYellow
+	case SequenceBgBrightBlue:
+		return StyleBgBrightBlue
+	case SequenceBgBrightMagenta:
+		return StyleBgBrightMagenta
+	case SequenceBgBrightCyan:
+		return StyleBgBrightCyan
+	case SequenceBgBrightWhite:
+		return StyleBgBrightWhite
+
+	// Special Cases
+	case SequenceUnknown:
+		return StyleUnknown
+	case SequenceUnset:
+		return StyleUnset
 	}
-	return ansi
+	return StyleUnknown // Default for unrecognized sequences
+}
+
+// styleToSequence converts a Style to its corresponding Sequence.
+func styleToSequence(s Style) Sequence {
+	switch {
+	case StyleReset.Matches(string(s)):
+		return SequenceReset
+	case StyleBold.Matches(string(s)):
+		return SequenceBold
+	case StyleFaint.Matches(string(s)):
+		return SequenceFaint
+	case StyleItalic.Matches(string(s)):
+		return SequenceItalic
+	case StyleUnderline.Matches(string(s)):
+		return SequenceUnderline
+	case StyleBlink.Matches(string(s)):
+		return SequenceBlink
+	case StyleRapidBlink.Matches(string(s)):
+		return SequenceRapidBlink
+	case StyleInverse.Matches(string(s)):
+		return SequenceInverse
+	case StyleHidden.Matches(string(s)):
+		return SequenceHidden
+	case StyleStrikethrough.Matches(string(s)):
+		return SequenceStrikethrough
+
+	// Foreground Colors
+	case StyleBlack.Matches(string(s)):
+		return SequenceBlack
+	case StyleRed.Matches(string(s)):
+		return SequenceRed
+	case StyleGreen.Matches(string(s)):
+		return SequenceGreen
+	case StyleYellow.Matches(string(s)):
+		return SequenceYellow
+	case StyleBlue.Matches(string(s)):
+		return SequenceBlue
+	case StyleMagenta.Matches(string(s)):
+		return SequenceMagenta
+	case StyleCyan.Matches(string(s)):
+		return SequenceCyan
+	case StyleWhite.Matches(string(s)):
+		return SequenceWhite
+
+	// Background Colors
+	case StyleBgBlack.Matches(string(s)):
+		return SequenceBgBlack
+	case StyleBgRed.Matches(string(s)):
+		return SequenceBgRed
+	case StyleBgGreen.Matches(string(s)):
+		return SequenceBgGreen
+	case StyleBgYellow.Matches(string(s)):
+		return SequenceBgYellow
+	case StyleBgBlue.Matches(string(s)):
+		return SequenceBgBlue
+	case StyleBgMagenta.Matches(string(s)):
+		return SequenceBgMagenta
+	case StyleBgCyan.Matches(string(s)):
+		return SequenceBgCyan
+	case StyleBgWhite.Matches(string(s)):
+		return SequenceBgWhite
+
+	// Bright Foreground Colors
+	case StyleBrightBlack.Matches(string(s)):
+		return SequenceBrightBlack
+	case StyleBrightRed.Matches(string(s)):
+		return SequenceBrightRed
+	case StyleBrightGreen.Matches(string(s)):
+		return SequenceBrightGreen
+	case StyleBrightYellow.Matches(string(s)):
+		return SequenceBrightYellow
+	case StyleBrightBlue.Matches(string(s)):
+		return SequenceBrightBlue
+	case StyleBrightMagenta.Matches(string(s)):
+		return SequenceBrightMagenta
+	case StyleBrightCyan.Matches(string(s)):
+		return SequenceBrightCyan
+	case StyleBrightWhite.Matches(string(s)):
+		return SequenceBrightWhite
+
+	// Bright Background Colors
+	case StyleBgBrightBlack.Matches(string(s)):
+		return SequenceBgBrightBlack
+	case StyleBgBrightRed.Matches(string(s)):
+		return SequenceBgBrightRed
+	case StyleBgBrightGreen.Matches(string(s)):
+		return SequenceBgBrightGreen
+	case StyleBgBrightYellow.Matches(string(s)):
+		return SequenceBgBrightYellow
+	case StyleBgBrightBlue.Matches(string(s)):
+		return SequenceBgBrightBlue
+	case StyleBgBrightMagenta.Matches(string(s)):
+		return SequenceBgBrightMagenta
+	case StyleBgBrightCyan.Matches(string(s)):
+		return SequenceBgBrightCyan
+	case StyleBgBrightWhite.Matches(string(s)):
+		return SequenceBgBrightWhite
+
+	// Special Cases
+	case StyleUnknown.Matches(string(s)):
+		return SequenceUnknown
+	case StyleUnset.Matches(string(s)):
+		return SequenceUnset
+	}
+	return SequenceUnknown // Default for unrecognized styles
 }

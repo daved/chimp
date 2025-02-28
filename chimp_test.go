@@ -41,13 +41,18 @@ func TestParseWrite(t *testing.T) {
 			input: "plain [[Red]]redonly [[Bold]]redandbold[[end]] redonlyagain[[end]] plainagain",
 			want:  "plain \033[31mredonly \033[31m\033[1mredandbold\033[31m redonlyagain\033[0m plainagain",
 		},
+		{
+			name:  "Unknown style ignored",
+			input: "[[Foo]]text[[end]]",
+			want:  "text",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			p := New(&buf)
-			n, err := p.Write([]byte(tt.input))
+			c := New(&buf)
+			n, err := c.Write([]byte(tt.input))
 			if err != nil {
 				t.Fatalf("Write failed: %v", err)
 			}
@@ -56,7 +61,7 @@ func TestParseWrite(t *testing.T) {
 			}
 			got := buf.String()
 			if got != tt.want {
-				t.Errorf("Parse.Write(%q) wrote %q, want %q", tt.input, got, tt.want)
+				t.Errorf("Chimp.Write(%q) wrote %q, want %q", tt.input, got, tt.want)
 			}
 		})
 	}
