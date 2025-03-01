@@ -3,8 +3,8 @@ package chimp
 // Sequence represents an ANSI escape sequence.
 type Sequence string
 
-// MakeSequence creates a Sequence from a string using style-to-sequence conversion.
-func MakeSequence(s string) Sequence {
+// makeSequence creates a Sequence from a string using style-to-sequence conversion.
+func makeSequence(s string) Sequence {
 	return styleToSequence(Style(s))
 }
 
@@ -16,8 +16,8 @@ func (s Sequence) ToStyle() Style {
 // Style represents an ANSI style name that maps to an escape sequence.
 type Style string
 
-// MakeStyle creates a Style from a string using sequence-to-style conversion.
-func MakeStyle(s string) Style {
+// makeStyle creates a Style from a string using sequence-to-style conversion.
+func makeStyle(s string) Style {
 	return sequenceToStyle(Sequence(s))
 }
 
