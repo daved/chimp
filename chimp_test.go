@@ -15,25 +15,29 @@ func TestWriteEdgeCases(t *testing.T) {
 		name    string
 		input   string
 		want    string
+		wantN   int
 		wantErr bool
 	}{
 		{
 			name:    "Incomplete tag at end",
 			input:   "[[Red",
 			want:    "",
-			wantErr: true, // Expect "unclosed style tag" error
+			wantN:   0,
+			wantErr: true,
 		},
 		{
 			name:    "Rapid style switches",
 			input:   "[[Red]][[end]][[Bold]]text[[end]]",
 			want:    "\033[31m\033[0m\033[1mtext\033[0m",
+			wantN:   len("\033[31m\033[0m\033[1mtext\033[0m"), // 4 + 2 + 4 + 4 + 2 = 16
 			wantErr: false,
 		},
 		{
 			name:    "Nested with incomplete inner",
 			input:   "[[Red]][[Bold",
 			want:    "\033[31m",
-			wantErr: true, // Unclosed tag error after writing initial style
+			wantN:   len("\033[31m"), // 4
+			wantErr: true,
 		},
 	}
 
@@ -45,8 +49,8 @@ func TestWriteEdgeCases(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Write() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if n > len(tt.input) {
-				t.Errorf("Write() wrote %d bytes, input was %d", n, len(tt.input))
+			if n != tt.wantN {
+				t.Errorf("Write() wrote %d bytes, want %d", n, tt.wantN)
 			}
 			got := buf.String()
 			if got != tt.want {

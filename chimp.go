@@ -23,45 +23,54 @@ func New(w io.Writer) *Chimp {
 }
 
 // Write processes input bytes, updating state and writing styled output.
+// It returns the number of bytes successfully written to the underlying writer.
 func (c *Chimp) Write(data []byte) (n int, err error) {
+	written := 0
 	for i := 0; i < len(data); {
 		if i+1 < len(data) && data[i] == '[' && data[i+1] == '[' {
-			advance, err := handleStyleTag(c.writer, data[i:], &c.styles, &c.lastStyles)
+			advance, n, err := handleStyleTag(c.writer, data[i:], &c.styles, &c.lastStyles)
 			if err != nil {
-				return i, err
+				return written, err
 			}
+			written += n
 			i += advance
 			if c.state == "normal" {
 				c.state = "content"
 			}
 		} else {
 			if c.state == "content" && !stylesTextsMatch(c.styles, c.lastStyles) {
-				_, err = applyStyleChanges(c.writer, c.styles, &c.lastStyles)
+				n, err := applyStyleChanges(c.writer, c.styles, &c.lastStyles)
 				if err != nil {
-					return i, err
+					return written, err
 				}
+				written += n
 			}
-			_, err = c.writer.Write([]byte{data[i]})
+			n, err := c.writer.Write([]byte{data[i]})
 			if err != nil {
-				return i, err
+				return written, err
 			}
+			written += n
 			i++
 		}
 	}
-	return len(data), nil
+	return written, nil
 }
 
-// handleStyleTag parses a style tag and applies changes, returning bytes advanced.
-func handleStyleTag(w io.Writer, data []byte, styles, lastStyles *[]string) (advance int, err error) {
+// handleStyleTag parses a style tag and applies changes, returning bytes advanced and written.
+func handleStyleTag(w io.Writer, data []byte, styles, lastStyles *[]string) (advance, n int, err error) {
 	newStyles, advance, continueParsing, err := splitStyles(data, *styles)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	*styles = newStyles
 	if !continueParsing {
-		_, err = applyStyleChanges(w, *styles, lastStyles)
+		n, err := applyStyleChanges(w, *styles, lastStyles)
+		if err != nil {
+			return advance, 0, err
+		}
+		return advance, n, nil
 	}
-	return advance, err
+	return advance, 0, nil
 }
 
 // applyStyleChanges writes styles or resets if changed, updating lastStyles.
@@ -70,17 +79,19 @@ func applyStyleChanges(w io.Writer, styles []string, lastStyles *[]string) (n in
 		s := joinStylesTexts(styles)
 		if s != "" {
 			dbg("Writing styles: %q\n", s)
-			_, err = w.Write([]byte(s))
+			n, err = w.Write([]byte(s))
 			if err != nil {
 				return 0, err
 			}
 			*lastStyles = append([]string(nil), styles...)
+			return n, nil
 		} else if len(*lastStyles) > 0 {
-			_, err = w.Write([]byte("\033[0m"))
+			n, err = w.Write([]byte("\033[0m"))
 			if err != nil {
 				return 0, err
 			}
 			*lastStyles = nil
+			return n, nil
 		}
 	}
 	return 0, nil
