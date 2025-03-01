@@ -1,5 +1,7 @@
 package chimp
 
+import "strings"
+
 // Sequence represents an ANSI escape sequence.
 type Sequence string
 
@@ -19,6 +21,18 @@ type Style string
 // makeStyle creates a Style from a string using sequence-to-style conversion.
 func makeStyle(s string) Style {
 	return sequenceToStyle(Sequence(s))
+}
+
+// ApplyStyles converts a list of style names to an ANSI sequence string.
+// Unknown styles are ignored.
+func ApplyStyles(styles ...string) string {
+	var ansi strings.Builder
+	for _, style := range styles {
+		if seq := Style(style).ToSequence(); seq != SequenceUnknown {
+			ansi.WriteString(string(seq))
+		}
+	}
+	return ansi.String()
 }
 
 // Matches checks if the input matches the Style exactly or case-insensitively with an offset of 32.
