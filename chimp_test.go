@@ -127,7 +127,7 @@ func TestSplitStyles(t *testing.T) {
 			if continueParsing != tt.wantContinue {
 				t.Errorf("splitStyles() continueParsing = %v, want %v", continueParsing, tt.wantContinue)
 			}
-			if !equalStyles(newStyles, tt.wantStyles) {
+			if !stylesTextsMatch(newStyles, tt.wantStyles) {
 				t.Errorf("splitStyles() styles = %v, want %v", newStyles, tt.wantStyles)
 			}
 		})

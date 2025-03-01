@@ -25,88 +25,65 @@ func New(w io.Writer) *Chimp {
 // Write processes input bytes, updating state and writing styled output.
 func (c *Chimp) Write(data []byte) (n int, err error) {
 	for i := 0; i < len(data); {
-		switch c.state {
-		case "normal":
-			if i+1 < len(data) && data[i] == '[' && data[i+1] == '[' {
-				newStyles, advance, continueParsing, err := splitStyles(data[i:], c.styles)
-				if err != nil {
-					return i, err
-				}
-				c.styles = newStyles
-				// Apply styles immediately if changed
-				if !equalStyles(c.styles, c.lastStyles) {
-					_, err = c.writeStyles()
-					if err != nil {
-						return i, err
-					}
-					if len(c.styles) > 0 {
-						c.lastStyles = append([]string(nil), c.styles...)
-					} else if len(c.lastStyles) > 0 {
-						_, err = c.writer.Write([]byte("\033[0m"))
-						if err != nil {
-							return i, err
-						}
-						c.lastStyles = nil
-					}
-				}
-				i += advance
-				if !continueParsing {
-					c.state = "content"
-				}
-			} else {
-				_, err = c.writer.Write([]byte{data[i]})
-				if err != nil {
-					return i, err
-				}
-				i++
+		if i+1 < len(data) && data[i] == '[' && data[i+1] == '[' {
+			advance, err := handleStyleTag(c.writer, data[i:], &c.styles, &c.lastStyles)
+			if err != nil {
+				return i, err
 			}
-		case "content":
-			if i+1 < len(data) && data[i] == '[' && data[i+1] == '[' {
-				newStyles, advance, continueParsing, err := splitStyles(data[i:], c.styles)
-				if err != nil {
-					return i, err
-				}
-				c.styles = newStyles
-				// Apply styles immediately if changed
-				if !equalStyles(c.styles, c.lastStyles) {
-					_, err = c.writeStyles()
-					if err != nil {
-						return i, err
-					}
-					if len(c.styles) > 0 {
-						c.lastStyles = append([]string(nil), c.styles...)
-					} else if len(c.lastStyles) > 0 {
-						_, err = c.writer.Write([]byte("\033[0m"))
-						if err != nil {
-							return i, err
-						}
-						c.lastStyles = nil
-					}
-				}
-				i += advance
-				if !continueParsing {
-					// No state change needed, but use continueParsing to avoid unused variable
-					continue
-				}
-			} else {
-				if !equalStyles(c.styles, c.lastStyles) {
-					_, err = c.writeStyles()
-					if err != nil {
-						return i, err
-					}
-					if len(c.styles) > 0 {
-						c.lastStyles = append([]string(nil), c.styles...)
-					}
-				}
-				_, err = c.writer.Write([]byte{data[i]})
-				if err != nil {
-					return i, err
-				}
-				i++
+			i += advance
+			if c.state == "normal" {
+				c.state = "content"
 			}
+		} else {
+			if c.state == "content" && !stylesTextsMatch(c.styles, c.lastStyles) {
+				_, err = applyStyleChanges(c.writer, c.styles, &c.lastStyles)
+				if err != nil {
+					return i, err
+				}
+			}
+			_, err = c.writer.Write([]byte{data[i]})
+			if err != nil {
+				return i, err
+			}
+			i++
 		}
 	}
 	return len(data), nil
+}
+
+// handleStyleTag parses a style tag and applies changes, returning bytes advanced.
+func handleStyleTag(w io.Writer, data []byte, styles, lastStyles *[]string) (advance int, err error) {
+	newStyles, advance, continueParsing, err := splitStyles(data, *styles)
+	if err != nil {
+		return 0, err
+	}
+	*styles = newStyles
+	if !continueParsing {
+		_, err = applyStyleChanges(w, *styles, lastStyles)
+	}
+	return advance, err
+}
+
+// applyStyleChanges writes styles or resets if changed, updating lastStyles.
+func applyStyleChanges(w io.Writer, styles []string, lastStyles *[]string) (n int, err error) {
+	if !stylesTextsMatch(styles, *lastStyles) {
+		s := joinStylesTexts(styles)
+		if s != "" {
+			dbg("Writing styles: %q\n", s)
+			_, err = w.Write([]byte(s))
+			if err != nil {
+				return 0, err
+			}
+			*lastStyles = append([]string(nil), styles...)
+		} else if len(*lastStyles) > 0 {
+			_, err = w.Write([]byte("\033[0m"))
+			if err != nil {
+				return 0, err
+			}
+			*lastStyles = nil
+		}
+	}
+	return 0, nil
 }
 
 // splitStyles updates the styles stack based on parsed input.
@@ -129,16 +106,6 @@ func splitStyles(data []byte, styles []string) (newStyles []string, advance int,
 		}
 	}
 	return newStyles, advance, continueParsing, nil
-}
-
-// writeStyles applies the current stack of ANSI styles to the writer.
-func (c *Chimp) writeStyles() (n int, err error) {
-	s := joinStyles(c.styles)
-	if s == "" {
-		return 0, nil
-	}
-	dbg("Writing styles: %q\n", s)
-	return c.writer.Write([]byte(s))
 }
 
 // parseStyle extracts a style or end marker from input data.
@@ -164,17 +131,17 @@ func parseStyle(data []byte) (style string, advance int, continueParsing bool, e
 	return "", 0, true, nil // Need more data
 }
 
-// joinStyles combines a slice of styles into a single ANSI string.
-func joinStyles(styles []string) string {
+// joinStylesTexts combines a slice of styles into a single ANSI string.
+func joinStylesTexts(styles []string) string {
 	var ansi strings.Builder
 	for _, style := range styles {
-		ansi.WriteString(getANSIStyles(style))
+		ansi.WriteString(stylesTextToSequencesText(style))
 	}
 	return ansi.String()
 }
 
-// getANSIStyles converts a comma-separated style string into ANSI escape sequences.
-func getANSIStyles(styles string) string {
+// stylesTextToSequencesText converts a comma-separated style string into ANSI escape sequences.
+func stylesTextToSequencesText(styles string) string {
 	ansi := ""
 	for _, style := range strings.Split(styles, ",") {
 		trimmed := strings.TrimSpace(style)
@@ -185,8 +152,8 @@ func getANSIStyles(styles string) string {
 	return ansi
 }
 
-// equalStyles compares two style slices for equality.
-func equalStyles(a, b []string) bool {
+// stylesTextsMatch compares two style slices for equality.
+func stylesTextsMatch(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
 	}
