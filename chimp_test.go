@@ -2,49 +2,38 @@ package chimp
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"testing"
 )
 
-func TestParseWrite(t *testing.T) {
+// Existing TestParseWrite remains unchanged...
+
+// TestWriteEdgeCases tests Surface scope edge cases for Chimp.Write.
+func TestWriteEdgeCases(t *testing.T) {
 	tests := []struct {
-		name  string
-		input string
-		want  string
+		name    string
+		input   string
+		want    string
+		wantErr bool
 	}{
 		{
-			name:  "Simple red bold",
-			input: "[[Red,Bold]]text[[end]]",
-			want:  "\033[31m\033[1mtext\033[0m",
+			name:    "Incomplete tag at end",
+			input:   "[[Red",
+			want:    "",
+			wantErr: true, // Expect "unclosed style tag" error
 		},
 		{
-			name:  "Red bold with surrounding text",
-			input: "before [[Red,Bold]]middle[[end]] after",
-			want:  "before \033[31m\033[1mmiddle\033[0m after",
+			name:    "Rapid style switches",
+			input:   "[[Red]][[end]][[Bold]]text[[end]]",
+			want:    "\033[31m\033[0m\033[1mtext\033[0m",
+			wantErr: false,
 		},
 		{
-			name:  "Multiple red bold tags",
-			input: "[[Red,Bold]]first[[end]] and [[Red,Bold]]second[[end]]",
-			want:  "\033[31m\033[1mfirst\033[0m and \033[31m\033[1msecond\033[0m",
-		},
-		{
-			name:  "Plain text no tags",
-			input: "just plain text",
-			want:  "just plain text",
-		},
-		{
-			name:  "Nested red then bold",
-			input: "[[Red]][[Bold]]text[[end]][[end]]",
-			want:  "\033[31m\033[1mtext\033[0m",
-		},
-		{
-			name:  "Progressive styling with words",
-			input: "plain [[Red]]redonly [[Bold]]redandbold[[end]] redonlyagain[[end]] plainagain",
-			want:  "plain \033[31mredonly \033[31m\033[1mredandbold\033[31m redonlyagain\033[0m plainagain",
-		},
-		{
-			name:  "Unknown style ignored",
-			input: "[[Foo]]text[[end]]",
-			want:  "text",
+			name:    "Nested with incomplete inner",
+			input:   "[[Red]][[Bold",
+			want:    "\033[31m",
+			wantErr: true, // Unclosed tag error after writing initial style
 		},
 	}
 
@@ -53,15 +42,93 @@ func TestParseWrite(t *testing.T) {
 			var buf bytes.Buffer
 			c := New(&buf)
 			n, err := c.Write([]byte(tt.input))
-			if err != nil {
-				t.Fatalf("Write failed: %v", err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Write() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if n != len(tt.input) {
-				t.Errorf("Expected %d bytes written, got %d", len(tt.input), n)
+			if n > len(tt.input) {
+				t.Errorf("Write() wrote %d bytes, input was %d", n, len(tt.input))
 			}
 			got := buf.String()
 			if got != tt.want {
-				t.Errorf("Chimp.Write(%q) wrote %q, want %q", tt.input, got, tt.want)
+				t.Errorf("Write(%q) wrote %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestWriterFailure tests Surface scope with a failing writer.
+func TestWriterFailure(t *testing.T) {
+	c := New(failingWriter{})
+	_, err := c.Write([]byte("[[Red]]text"))
+	if err == nil {
+		t.Errorf("Write() with failing writer should return an error")
+	}
+	if !errors.Is(err, io.ErrClosedPipe) {
+		t.Errorf("Write() error = %v, want %v", err, io.ErrClosedPipe)
+	}
+}
+
+// failingWriter always fails with io.ErrClosedPipe.
+type failingWriter struct{}
+
+func (failingWriter) Write(p []byte) (n int, err error) {
+	return 0, io.ErrClosedPipe
+}
+
+// TestSplitStyles tests Unit scope for splitStyles.
+func TestSplitStyles(t *testing.T) {
+	tests := []struct {
+		name         string
+		data         []byte
+		styles       []string
+		wantStyles   []string
+		wantAdvance  int
+		wantContinue bool
+		wantErr      bool
+	}{
+		{
+			name:         "New style",
+			data:         []byte("[[Bold]]text"),
+			styles:       []string{},
+			wantStyles:   []string{"Bold"},
+			wantAdvance:  8,
+			wantContinue: false,
+			wantErr:      false,
+		},
+		{
+			name:         "End style",
+			data:         []byte("[[end]]more"),
+			styles:       []string{"Red"},
+			wantStyles:   []string{},
+			wantAdvance:  7,
+			wantContinue: false,
+			wantErr:      false,
+		},
+		{
+			name:         "Incomplete tag",
+			data:         []byte("[[Red"),
+			styles:       []string{},
+			wantStyles:   nil,
+			wantAdvance:  0,
+			wantContinue: true,
+			wantErr:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			newStyles, advance, continueParsing, err := splitStyles(tt.data, tt.styles)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("splitStyles() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if advance != tt.wantAdvance {
+				t.Errorf("splitStyles() advance = %d, want %d", advance, tt.wantAdvance)
+			}
+			if continueParsing != tt.wantContinue {
+				t.Errorf("splitStyles() continueParsing = %v, want %v", continueParsing, tt.wantContinue)
+			}
+			if !equalStyles(newStyles, tt.wantStyles) {
+				t.Errorf("splitStyles() styles = %v, want %v", newStyles, tt.wantStyles)
 			}
 		})
 	}

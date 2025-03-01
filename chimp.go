@@ -33,6 +33,22 @@ func (c *Chimp) Write(data []byte) (n int, err error) {
 					return i, err
 				}
 				c.styles = newStyles
+				// Apply styles immediately if changed
+				if !equalStyles(c.styles, c.lastStyles) {
+					_, err = c.writeStyles()
+					if err != nil {
+						return i, err
+					}
+					if len(c.styles) > 0 {
+						c.lastStyles = append([]string(nil), c.styles...)
+					} else if len(c.lastStyles) > 0 {
+						_, err = c.writer.Write([]byte("\033[0m"))
+						if err != nil {
+							return i, err
+						}
+						c.lastStyles = nil
+					}
+				}
 				i += advance
 				if !continueParsing {
 					c.state = "content"
@@ -51,21 +67,34 @@ func (c *Chimp) Write(data []byte) (n int, err error) {
 					return i, err
 				}
 				c.styles = newStyles
-				i += advance
-				if !continueParsing && len(c.lastStyles) > 0 && len(c.styles) == 0 {
-					_, err = c.writer.Write([]byte("\033[0m"))
-					if err != nil {
-						return i, err
-					}
-					c.lastStyles = nil
-				}
-			} else {
-				if !equalStyles(c.styles, c.lastStyles) && len(c.styles) > 0 {
+				// Apply styles immediately if changed
+				if !equalStyles(c.styles, c.lastStyles) {
 					_, err = c.writeStyles()
 					if err != nil {
 						return i, err
 					}
-					if s := joinStyles(c.styles); s != "" {
+					if len(c.styles) > 0 {
+						c.lastStyles = append([]string(nil), c.styles...)
+					} else if len(c.lastStyles) > 0 {
+						_, err = c.writer.Write([]byte("\033[0m"))
+						if err != nil {
+							return i, err
+						}
+						c.lastStyles = nil
+					}
+				}
+				i += advance
+				if !continueParsing {
+					// No state change needed, but use continueParsing to avoid unused variable
+					continue
+				}
+			} else {
+				if !equalStyles(c.styles, c.lastStyles) {
+					_, err = c.writeStyles()
+					if err != nil {
+						return i, err
+					}
+					if len(c.styles) > 0 {
 						c.lastStyles = append([]string(nil), c.styles...)
 					}
 				}
